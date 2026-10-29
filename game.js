@@ -1,872 +1,625 @@
-// Основной игровой движок CyberArrow Canvas 60fps
+// Симулятор Просмотра Рекламы — Основной игровой движок и логика
 document.addEventListener('DOMContentLoaded', () => {
-  const canvas = document.getElementById('game-canvas');
-  const ctx = canvas.getContext('2d');
+  // DOM Элементы HUD
+  const elWeek = document.getElementById('val-week');
+  const elDay = document.getElementById('val-day');
+  const elMoney = document.getElementById('val-money');
+  const elRentDays = document.getElementById('val-rent-days');
+  const elRentAmount = document.getElementById('val-rent-amount');
+  const elIncomeToast = document.getElementById('income-toast');
 
-  // DOM элементы
-  const elLevelNum = document.getElementById('level-number');
-  const elCorePercent = document.getElementById('core-percent');
-  const elCoreFill = document.getElementById('core-progress-fill');
-  const elCoreMilestone = document.getElementById('core-milestone-text');
-  const elRemaining = document.getElementById('remaining-arrows');
-  const elMoves = document.getElementById('moves-count');
-  const elHintBadge = document.getElementById('hint-badge');
-  const overlayClear = document.getElementById('level-clear-overlay');
-  const btnNextLevel = document.getElementById('btn-next-level');
-  const btnRestart = document.getElementById('btn-restart');
-  const btnUndo = document.getElementById('btn-undo');
-  const btnHint = document.getElementById('btn-hint');
+  // Кнопки действий
+  const btnWatchTv = document.getElementById('btn-watch-tv');
+  const btnOpenStore = document.getElementById('btn-open-store');
+  const btnTakeShift = document.getElementById('btn-take-shift');
+  const btnNextDay = document.getElementById('btn-next-day');
   const btnSound = document.getElementById('btn-sound');
   const btnLang = document.getElementById('btn-lang');
-  const btnTheme = document.getElementById('btn-theme');
 
-  // Текстовые элементы локализации
-  const txtLevelLabel = document.getElementById('txt-level-label');
-  const txtCoreTitle = document.getElementById('txt-core-title');
-  const txtClearTitle = document.getElementById('txt-clear-title');
-  const txtClearStats = document.getElementById('txt-clear-stats');
-  const txtClearReward = document.getElementById('txt-clear-reward');
-  const txtRemainingLabel = document.getElementById('txt-remaining-label');
-  const txtMovesLabel = document.getElementById('txt-moves-label');
-  const txtBtnRestart = document.getElementById('txt-btn-restart');
-  const txtBtnUndo = document.getElementById('txt-btn-undo');
-  const txtBtnHint = document.getElementById('txt-btn-hint');
+  const shiftBadge = document.getElementById('shift-counter-badge');
+  const shiftCooldownBar = document.getElementById('shift-cooldown-bar');
+  const cooldownTimerText = document.getElementById('cooldown-timer');
 
-  // Словарь локализации (Русский / Английский)
-  const I18N = {
-    ru: {
-      levelLabel: "УРОВЕНЬ",
-      coreTitle: "🔋 Восстановление Ядра",
-      clearTitle: "СЕКТОР ОЧИЩЕН!",
-      clearSubtitle: "Все стрелки выведены без ошибок",
-      clearReward: "+25 Энергии Ядра",
-      nextBtn: "СЛЕДУЮЩИЙ УРОВЕНЬ ➔",
-      remainingLabel: "ОСТАЛОСЬ:",
-      movesLabel: "ХОДОВ:",
-      resetBtn: "Сброс",
-      undoBtn: "Назад",
-      hintBtn: "Подсказка",
-      levelPrompt: "Перейти к уровню (1-100):",
-      milestones: [
-        { threshold: 0, text: "Модуль 1: Питание шины данных" },
-        { threshold: 100, text: "Модуль 2: Квантовый буфер маршрутизации" },
-        { threshold: 250, text: "Модуль 3: Оптический коммутатор импульсов" },
-        { threshold: 450, text: "Модуль 4: Синхронизатор потоков ядра" },
-        { threshold: 750, text: "Модуль 5: Автономный нейроматричный шлюз" }
-      ]
+  // Модальные окна
+  const modalTv = document.getElementById('modal-tv');
+  const modalStore = document.getElementById('modal-store');
+  const modalEvent = document.getElementById('modal-event');
+  const modalRent = document.getElementById('modal-rent');
+  const modalEnding = document.getElementById('modal-ending');
+
+  // Содержимое ТВ
+  const adCategory = document.getElementById('ad-category');
+  const adIcon = document.getElementById('ad-icon');
+  const adTitle = document.getElementById('ad-title');
+  const adSlogan = document.getElementById('ad-slogan');
+  const adChoicesContainer = document.getElementById('ad-choices-container');
+  const adCrossMinigame = document.getElementById('ad-cross-minigame');
+  const runawayCrossBtn = document.getElementById('runaway-cross');
+  const crossField = document.getElementById('cross-field');
+  const crossTimerSpan = document.getElementById('cross-timer');
+
+  // Содержимое События
+  const eventIcon = document.getElementById('event-icon');
+  const eventTitle = document.getElementById('event-title');
+  const eventDesc = document.getElementById('event-desc');
+  const eventChoices = document.getElementById('event-choices');
+
+  // Содержимое Аренды
+  const rentBillSum = document.getElementById('rent-bill-sum');
+  const rentBillBalance = document.getElementById('rent-bill-balance');
+  const rentActions = document.getElementById('rent-actions');
+
+  // Содержимое Финала
+  const endingIcon = document.getElementById('ending-icon');
+  const endingTitle = document.getElementById('ending-title');
+  const endingText = document.getElementById('ending-text');
+  const endWeeks = document.getElementById('end-weeks');
+  const endFakeAds = document.getElementById('end-fake-ads');
+  const endRealAds = document.getElementById('end-real-ads');
+  const btnRestartGame = document.getElementById('btn-restart-game');
+
+  // Элементы комнаты (SVG)
+  const bedDefault = document.getElementById('bed-default');
+  const bedUpgraded = document.getElementById('bed-upgraded');
+  const deskContent = document.getElementById('desk-content');
+  const pcContent = document.getElementById('pc-content');
+  const windowContent = document.getElementById('window-content');
+  const windowCrack = document.getElementById('window-crack');
+
+  // Игровое состояние
+  const STATE_KEY = 'ad_sim_save_v1';
+  let state = {
+    money: 800,
+    week: 1,
+    day: 1,
+    rentAmount: 3000,
+    adBonus: 0,
+    shiftsToday: 0,
+    lastShiftDay: 1,
+    lastShiftTimestamp: 0,
+    realAdsWatchedTotal: 0,
+    fakeAdsWatchedTotal: 0,
+    furniture: {
+      desk: false,
+      bed: false,
+      window: false,
+      pc: false
     },
-    en: {
-      levelLabel: "SECTOR",
-      coreTitle: "🔋 Core Restoration",
-      clearTitle: "SECTOR CLEARED!",
-      clearSubtitle: "All data streams released successfully",
-      clearReward: "+25 Core Energy",
-      nextBtn: "NEXT SECTOR ➔",
-      remainingLabel: "REMAINING:",
-      movesLabel: "MOVES:",
-      resetBtn: "Reset",
-      undoBtn: "Undo",
-      hintBtn: "Hint",
-      levelPrompt: "Jump to sector (1-100):",
-      milestones: [
-        { threshold: 0, text: "Module 1: Bus Power Grid" },
-        { threshold: 100, text: "Module 2: Quantum Route Buffer" },
-        { threshold: 250, text: "Module 3: Optical Pulse Switch" },
-        { threshold: 450, text: "Module 4: Core Stream Sync" },
-        { threshold: 750, text: "Module 5: Autonomous Neural Gateway" }
-      ]
+    storyFlags: {
+      landlordRaised: false,
+      deskBonus: false,
+      windowSeen: false,
+      pcUnlocked: false
     }
   };
 
-  let currentLang = 'ru';
-  function detectLanguage() {
-    const saved = localStorage.getItem('cyberarrow_lang');
-    if (saved === 'ru' || saved === 'en') return saved;
-    const sysLang = (window.bridge && window.bridge.platform && window.bridge.platform.language) || navigator.language || 'en';
-    return (sysLang.toLowerCase().startsWith('ru') || sysLang.toLowerCase().startsWith('be') || sysLang.toLowerCase().startsWith('uk')) ? 'ru' : 'en';
-  }
-  currentLang = detectLanguage();
-
-  function applyLanguage(lang) {
-    currentLang = lang;
-    localStorage.setItem('cyberarrow_lang', lang);
-    const t = I18N[lang] || I18N.en;
-
-    if (btnLang) btnLang.textContent = lang.toUpperCase();
-    if (txtLevelLabel) txtLevelLabel.textContent = t.levelLabel;
-    if (txtCoreTitle) txtCoreTitle.textContent = t.coreTitle;
-    if (txtClearTitle) txtClearTitle.textContent = t.clearTitle;
-    if (txtClearStats) txtClearStats.textContent = t.clearSubtitle;
-    if (txtClearReward) txtClearReward.textContent = t.clearReward;
-    if (btnNextLevel) btnNextLevel.textContent = t.nextBtn;
-    if (txtRemainingLabel) txtRemainingLabel.textContent = t.remainingLabel;
-    if (txtMovesLabel) txtMovesLabel.textContent = t.movesLabel;
-    if (txtBtnRestart) txtBtnRestart.textContent = t.resetBtn;
-    if (txtBtnUndo) txtBtnUndo.textContent = t.undoBtn;
-    if (txtBtnHint) txtBtnHint.textContent = t.hintBtn;
-  }
-
-  // Playgama Bridge SDK Wrapper
+  // Playgama Bridge Wrapper
   const PG = {
     initialized: false,
     async init() {
       if (typeof window.bridge === 'undefined') {
-        console.log('[Playgama] Bridge SDK not detected (standalone/offline mode).');
+        console.log('[Playgama] Standalone mode (Bridge not found)');
         return;
       }
       try {
         await window.bridge.initialize();
         this.initialized = true;
-        console.log('[Playgama] Bridge initialized successfully!');
-
-        // Сообщаем платформе, что игра готова
+        console.log('[Playgama] Bridge initialized!');
         if (window.bridge.platform && window.bridge.platform.sendMessage) {
           window.bridge.platform.sendMessage('game_ready');
         }
 
-        // Автоматическая пауза и выключение звука при открытии рекламы/сворачивании
+        // Автопауза звука при открытии рекламы
         if (window.bridge.platform && window.bridge.platform.on) {
           window.bridge.platform.on('pause_state_changed', (isPaused) => {
-            if (window.soundEngine) {
-              window.soundEngine.enabled = !isPaused;
-            }
+            if (window.sound) window.sound.enabled = !isPaused;
           });
         }
 
-        // Слушатель Rewarded рекламы
+        // Слушатель Rewarded
         if (window.bridge.advertisement && window.bridge.advertisement.on) {
-          window.bridge.advertisement.on('rewarded_state_changed', (state) => {
-            console.log('[Playgama] Rewarded state changed:', state);
-            if (state === 'rewarded' && window._onPlaygamaRewardCallback) {
-              window._onPlaygamaRewardCallback();
-              window._onPlaygamaRewardCallback = null;
+          window.bridge.advertisement.on('rewarded_state_changed', (status) => {
+            if (status === 'rewarded' && window._onShiftRewarded) {
+              window._onShiftRewarded();
+              window._onShiftRewarded = null;
             }
           });
         }
 
-        // Загружаем облачный прогресс, если есть
-        const cloudData = await this.loadProgress();
-        if (cloudData && cloudData.lvl) {
-          currentLevelIdx = Math.max(currentLevelIdx, cloudData.lvl);
-          coreEnergy = Math.max(coreEnergy, cloudData.energy || 0);
-          hintsAvailable = Math.max(hintsAvailable, cloudData.hints || 0);
-          updateProgressionUI();
-          updateStats();
+        // Загрузка из облака
+        if (window.bridge.storage) {
+          const cloudData = await window.bridge.storage.get(['ad_sim_save']);
+          if (cloudData && cloudData.ad_sim_save) {
+            try {
+              const parsed = JSON.parse(cloudData.ad_sim_save);
+              if (parsed && parsed.week) {
+                state = parsed;
+                updateAllUI();
+              }
+            } catch (e) {}
+          }
         }
       } catch (err) {
         console.warn('[Playgama] Bridge init error:', err);
       }
     },
 
-    showInterstitial(placement = 'level_completed') {
+    showShiftRewarded(callback) {
       if (this.initialized && window.bridge && window.bridge.advertisement) {
+        window._onShiftRewarded = callback;
         try {
-          window.bridge.advertisement.showInterstitial(placement);
+          window.bridge.advertisement.showRewarded('take_shift');
         } catch (e) {
-          console.warn('[Playgama] Interstitial error:', e);
-        }
-      }
-    },
-
-    showRewarded(placement = 'get_hint', onRewarded) {
-      if (this.initialized && window.bridge && window.bridge.advertisement) {
-        window._onPlaygamaRewardCallback = onRewarded;
-        try {
-          window.bridge.advertisement.showRewarded(placement);
-        } catch (e) {
-          console.warn('[Playgama] Rewarded failed, running fallback:', e);
-          if (onRewarded) onRewarded();
+          console.warn('[Playgama] showRewarded error, fallback:', e);
+          if (callback) callback();
         }
       } else {
-        // Fallback если SDK недоступен
-        if (onRewarded) onRewarded();
+        // Fallback для локального тестирования
+        if (callback) callback();
       }
     },
 
-    async loadProgress() {
+    save() {
+      localStorage.setItem(STATE_KEY, JSON.stringify(state));
       if (this.initialized && window.bridge && window.bridge.storage) {
         try {
-          const res = await window.bridge.storage.get(['cyberarrow_lvl', 'cyberarrow_energy', 'cyberarrow_hints']);
-          if (res) {
-            return {
-              lvl: parseInt(res.cyberarrow_lvl, 10) || null,
-              energy: parseInt(res.cyberarrow_energy, 10) || null,
-              hints: parseInt(res.cyberarrow_hints, 10) || null
-            };
-          }
-        } catch (e) {
-          console.warn('[Playgama] Storage get error:', e);
-        }
-      }
-      return null;
-    },
-
-    saveProgress(lvl, energy, hints) {
-      localStorage.setItem('cyberarrow_lvl', lvl);
-      localStorage.setItem('cyberarrow_energy', energy);
-      localStorage.setItem('cyberarrow_hints', hints);
-
-      if (this.initialized && window.bridge && window.bridge.storage) {
-        try {
-          window.bridge.storage.set({
-            'cyberarrow_lvl': String(lvl),
-            'cyberarrow_energy': String(energy),
-            'cyberarrow_hints': String(hints)
-          });
-        } catch (e) {
-          console.warn('[Playgama] Storage set error:', e);
-        }
+          window.bridge.storage.set({ 'ad_sim_save': JSON.stringify(state) });
+        } catch (e) {}
       }
     }
   };
 
-  // Состояние игры
-  let currentLevelIdx = parseInt(localStorage.getItem('cyberarrow_lvl') || '1', 10);
-  let coreEnergy = parseInt(localStorage.getItem('cyberarrow_energy') || '0', 10);
-  let hintsAvailable = parseInt(localStorage.getItem('cyberarrow_hints') || '5', 10);
-  let movesCount = 0;
-  let comboStreak = 0;
-
-  let currentLevelData = null;
-  let arrows = []; // Список стрелок
-  let particles = [];
-  let historyStack = []; // Стек ходов для Undo
-  let hintedArrowId = null;
-  let isLevelCompleted = false;
-
-  // Темы оформления
-  const themes = [
-    { name: 'cyan', arrowColor: '#00f2fe', arrowGlow: 'rgba(0, 242, 254, 0.5)', bg: '#0d1117' },
-    { name: 'amber', arrowColor: '#fbbf24', arrowGlow: 'rgba(251, 191, 36, 0.5)', bg: '#140f07' },
-    { name: 'neon', arrowColor: '#39ff14', arrowGlow: 'rgba(57, 255, 20, 0.5)', bg: '#071408' }
-  ];
-  let themeIdx = 0;
-
-  const MILESTONES = [
-    { threshold: 0, text: "Модуль 1: Питание шины данных" },
-    { threshold: 100, text: "Модуль 2: Квантовый буфер маршрутизации" },
-    { threshold: 250, text: "Модуль 3: Оптический коммутатор импульсов" },
-    { threshold: 450, text: "Модуль 4: Синхронизатор потоков ядра" },
-    { threshold: 750, text: "Модуль 5: Автономный нейроматричный шлюз" }
-  ];
-
-  // Адаптивное масштабирование под экран телефона (High DPI)
-  let dpr = window.devicePixelRatio || 1;
-  let boardWidth = 0;
-  let boardHeight = 0;
-  let cellSize = 0;
-  let offsetX = 0;
-  let offsetY = 0;
-
-  function resizeCanvas() {
-    const rect = canvas.parentElement.getBoundingClientRect();
-    dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
-
-    boardWidth = rect.width;
-    boardHeight = rect.height;
-
-    if (currentLevelData) {
-      calculateLayout();
-    }
-  }
-
-  window.addEventListener('resize', resizeCanvas);
-
-  function calculateLayout() {
-    const pad = 24;
-    const availW = boardWidth - pad * 2;
-    const availH = boardHeight - pad * 2;
-
-    const cellW = availW / currentLevelData.cols;
-    const cellH = availH / currentLevelData.rows;
-
-    cellSize = Math.min(cellW, cellH, 68); // Ограничение макс. размера клетки
-
-    const totalGridW = cellSize * currentLevelData.cols;
-    const totalGridH = cellSize * currentLevelData.rows;
-
-    offsetX = (boardWidth - totalGridW) / 2;
-    offsetY = (boardHeight - totalGridH) / 2;
-  }
-
-  // Загрузка уровня
-  function loadLevel(idx) {
-    currentLevelIdx = idx;
-    PG.saveProgress(currentLevelIdx, coreEnergy, hintsAvailable);
-    elLevelNum.textContent = currentLevelIdx;
-    overlayClear.classList.add('hidden');
-    isLevelCompleted = false;
-    movesCount = 0;
-    comboStreak = 0;
-    elMoves.textContent = movesCount;
-    historyStack = [];
-    hintedArrowId = null;
-
-    currentLevelData = window.levelManager.generateLevel(currentLevelIdx);
-    calculateLayout();
-
-    // Создаем объекты стрелок
-    arrows = [];
-    let idCounter = 1;
-
-    for (let r = 0; r < currentLevelData.rows; r++) {
-      for (let c = 0; c < currentLevelData.cols; c++) {
-        const cell = currentLevelData.grid[r][c];
-        if (cell) {
-          arrows.push({
-            id: idCounter++,
-            r,
-            c,
-            dirKey: cell.dir,
-            dir: DIRS[cell.dir],
-            special: cell.special || null,
-            state: 'IDLE', // 'IDLE', 'FLYING', 'BUMPING', 'GONE'
-            x: 0,
-            y: 0,
-            bumpProgress: 0,
-            bumpVector: { x: 0, y: 0 },
-            flyX: 0,
-            flyY: 0,
-            speed: 0,
-            opacity: 1,
-            rotation: DIRS[cell.dir].angle,
-            targetRotation: DIRS[cell.dir].angle
-          });
+  // Загрузка локального сохранения
+  function loadLocalState() {
+    const raw = localStorage.getItem(STATE_KEY);
+    if (raw) {
+      try {
+        const loaded = JSON.parse(raw);
+        if (loaded && loaded.week) {
+          state = loaded;
         }
-      }
-    }
-
-    updateStats();
-    updateProgressionUI();
-  }
-
-  function updateStats() {
-    const remaining = arrows.filter(a => a.state === 'IDLE' || a.state === 'BUMPING').length;
-    elRemaining.textContent = remaining;
-    elHintBadge.textContent = hintsAvailable;
-
-    // Определение ситуации дедлока
-    if (remaining > 0 && !isLevelCompleted) {
-      const anyFree = arrows.some(a => a.state === 'IDLE' && canArrowEscape(a).clear);
-      if (!anyFree) {
-        btnRestart.style.boxShadow = '0 0 14px rgba(245, 158, 11, 0.7)';
-        btnUndo.style.boxShadow = '0 0 14px rgba(245, 158, 11, 0.7)';
-      } else {
-        btnRestart.style.boxShadow = '';
-        btnUndo.style.boxShadow = '';
-      }
+      } catch (e) {}
     }
   }
 
-  function updateProgressionUI() {
-    const maxEnergy = 1000;
-    const pct = Math.min(Math.round((coreEnergy / maxEnergy) * 100), 100);
-    elCorePercent.textContent = `${pct}%`;
-    elCoreFill.style.width = `${Math.max(pct, 4)}%`;
+  // Обновление интерфейса
+  function updateAllUI() {
+    elWeek.textContent = state.week;
+    elDay.textContent = state.day;
+    elMoney.textContent = state.money.toLocaleString('ru-RU');
+    elRentAmount.textContent = state.rentAmount.toLocaleString('ru-RU');
 
-    const msList = (I18N[currentLang] || I18N.en).milestones;
-    let activeMilestone = msList[0].text;
-    for (const m of msList) {
-      if (coreEnergy >= m.threshold) {
-        activeMilestone = m.text;
-      }
-    }
-    elCoreMilestone.textContent = activeMilestone;
-  }
-
-  // Проверка пути стрелки
-  function canArrowEscape(arrow) {
-    let currR = arrow.r + arrow.dir.dr;
-    let currC = arrow.c + arrow.dir.dc;
-
-    while (
-      currR >= 0 && currR < currentLevelData.rows &&
-      currC >= 0 && currC < currentLevelData.cols
-    ) {
-      const blocking = arrows.find(a => a.r === currR && a.c === currC && a.state !== 'GONE');
-      if (blocking) {
-        return { clear: false, blocker: blocking };
-      }
-      currR += arrow.dir.dr;
-      currC += arrow.dir.dc;
-    }
-
-    return { clear: true };
-  }
-
-  // Обработка тапа по стрелке
-  function tapArrow(arrow) {
-    if (arrow.state !== 'IDLE' || isLevelCompleted) return;
-
-    window.soundEngine.init();
-    movesCount++;
-    elMoves.textContent = movesCount;
-    hintedArrowId = null;
-
-    const check = canArrowEscape(arrow);
-
-    if (check.clear) {
-      // Стрелка свободна - запускаем полет!
-      arrow.state = 'FLYING';
-      arrow.flyX = 0;
-      arrow.flyY = 0;
-      arrow.speed = 18;
-
-      comboStreak++;
-      window.soundEngine.playLaunch(comboStreak);
-
-      // Сохраняем ход для Undo
-      historyStack.push({
-        type: 'LAUNCH',
-        arrowId: arrow.id,
-        r: arrow.r,
-        c: arrow.c,
-        dirKey: arrow.dirKey,
-        special: arrow.special
-      });
-
-      // Если это ротатор - поворачиваем соседние стрелки
-      if (arrow.special === 'rotator') {
-        rotateNeighbors(arrow.r, arrow.c);
-      }
-
+    const daysLeft = 8 - state.day;
+    elRentDays.textContent = `${daysLeft} дн.`;
+    if (daysLeft <= 2) {
+      elRentDays.style.color = 'var(--accent-red)';
     } else {
-      // Путь заблокирован - столкновение!
-      comboStreak = 0;
-      arrow.state = 'BUMPING';
-      arrow.bumpProgress = 0;
-      arrow.bumpVector = {
-        x: arrow.dir.dc * (cellSize * 0.28),
-        y: arrow.dir.dr * (cellSize * 0.28)
-      };
+      elRentDays.style.color = 'var(--accent-amber)';
+    }
 
-      // Блокирующая стрелка слегка вздрагивает
-      if (check.blocker && check.blocker.state === 'IDLE') {
-        check.blocker.bumpVector = {
-          x: arrow.dir.dc * (cellSize * 0.1),
-          y: arrow.dir.dr * (cellSize * 0.1)
-        };
-        check.blocker.bumpProgress = 0;
-        check.blocker.state = 'BUMPING';
-      }
+    // Смены
+    shiftBadge.textContent = `${3 - state.shiftsToday}/3`;
+    checkShiftCooldown();
 
-      window.soundEngine.playBump();
-      spawnSparkParticles(
-        offsetX + (check.blocker.c + 0.5) * cellSize,
-        offsetY + (check.blocker.r + 0.5) * cellSize,
-        '#ef4444'
-      );
+    // Обновление комнаты
+    updateRoomVisuals();
+  }
+
+  function updateRoomVisuals() {
+    if (state.furniture.bed) {
+      bedDefault.style.display = 'none';
+      bedUpgraded.style.display = 'block';
+    } else {
+      bedDefault.style.display = 'block';
+      bedUpgraded.style.display = 'none';
+    }
+
+    if (state.furniture.desk) {
+      deskContent.style.display = 'block';
+    } else {
+      deskContent.style.display = 'none';
+    }
+
+    if (state.furniture.window) {
+      windowCrack.style.display = 'none';
+      windowContent.style.display = 'block';
+    } else {
+      windowCrack.style.display = 'block';
+      windowContent.style.display = 'none';
+    }
+
+    if (state.furniture.pc) {
+      pcContent.style.display = 'block';
+    } else {
+      pcContent.style.display = 'none';
     }
   }
 
-  // Поворот соседних стрелок на 90 градусов по часовой стрелке
-  function rotateNeighbors(r, c) {
-    const neighborDeltas = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-    const turnOrder = { UP: 'RIGHT', RIGHT: 'DOWN', DOWN: 'LEFT', LEFT: 'UP' };
+  function showIncomeToast(amount) {
+    elIncomeToast.textContent = `+${amount} ₽`;
+    elIncomeToast.classList.remove('hidden');
+    setTimeout(() => {
+      elIncomeToast.classList.add('hidden');
+    }, 850);
+  }
 
-    neighborDeltas.forEach(([dr, dc]) => {
-      const nr = r + dr;
-      const nc = c + dc;
-      const neighbor = arrows.find(a => a.r === nr && a.c === nc && a.state === 'IDLE');
-      if (neighbor) {
-        neighbor.dirKey = turnOrder[neighbor.dirKey];
-        neighbor.dir = DIRS[neighbor.dirKey];
-        neighbor.targetRotation += Math.PI / 2;
-        spawnSparkParticles(
-          offsetX + (nc + 0.5) * cellSize,
-          offsetY + (nr + 0.5) * cellSize,
-          '#b537f2'
-        );
-      }
+  // ================= ФЕЙКОВАЯ ТВ-РЕКЛАМА =================
+  let currentAd = null;
+  let crossTimerInterval = null;
+  let crossJumps = 0;
+
+  function watchTvAd() {
+    window.sound.playTvOn();
+
+    // Выбираем случайную рекламу
+    const availableAds = window.GAME_DATA.FAKE_ADS.filter(ad => {
+      if (ad.requirePC && !state.furniture.pc) return false;
+      return true;
     });
-  }
 
-  // Спавн искр / эффектов
-  function spawnSparkParticles(x, y, color = '#00f2fe') {
-    for (let i = 0; i < 14; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 2 + Math.random() * 5;
-      particles.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 1.0,
-        decay: 0.03 + Math.random() * 0.04,
-        size: 2 + Math.random() * 3,
-        color
+    currentAd = availableAds[Math.floor(Math.random() * availableAds.length)];
+
+    adCategory.textContent = currentAd.category.toUpperCase();
+    adIcon.textContent = currentAd.icon;
+    adTitle.textContent = currentAd.title;
+    adSlogan.textContent = currentAd.slogan;
+
+    adChoicesContainer.innerHTML = '';
+    adChoicesContainer.classList.remove('hidden');
+    adCrossMinigame.classList.add('hidden');
+
+    if (currentAd.type === 'choice') {
+      currentAd.choices.forEach(ch => {
+        const btn = document.createElement('button');
+        btn.className = 'ad-choice-btn';
+        const finalReward = ch.reward + state.adBonus;
+        btn.textContent = `${ch.text} (+${finalReward} ₽)`;
+
+        btn.onclick = () => {
+          grantAdReward(finalReward, ch.comment);
+        };
+        adChoicesContainer.appendChild(btn);
       });
+    } else if (currentAd.type === 'minigame_cross') {
+      adChoicesContainer.classList.add('hidden');
+      adCrossMinigame.classList.remove('hidden');
+      startCrossMinigame();
     }
+
+    modalTv.classList.remove('hidden');
   }
 
-  // Undo (Отмена хода)
-  function undoLastMove() {
-    if (historyStack.length === 0 || isLevelCompleted) return;
+  function grantAdReward(amount, comment) {
+    state.money += amount;
+    state.fakeAdsWatchedTotal++;
+    window.sound.playCash();
+    showIncomeToast(amount);
+    updateAllUI();
+    PG.save();
 
-    const last = historyStack.pop();
-    const arrow = arrows.find(a => a.id === last.arrowId);
-    if (arrow) {
-      arrow.state = 'IDLE';
-      arrow.flyX = 0;
-      arrow.flyY = 0;
-      arrow.opacity = 1;
-      arrow.r = last.r;
-      arrow.c = last.c;
-      arrow.dirKey = last.dirKey;
-      arrow.dir = DIRS[last.dirKey];
-      arrow.rotation = arrow.dir.angle;
-      arrow.targetRotation = arrow.dir.angle;
-
-      spawnSparkParticles(
-        offsetX + (arrow.c + 0.5) * cellSize,
-        offsetY + (arrow.r + 0.5) * cellSize,
-        '#4facfe'
-      );
-      window.soundEngine.playHint();
-      updateStats();
-    }
+    setTimeout(() => {
+      modalTv.classList.add('hidden');
+    }, 300);
   }
 
-  // Подсказка (Highlighting a safe arrow + Playgama Rewarded Video integration)
-  function giveHint() {
-    if (isLevelCompleted) return;
+  // Мини-игра с убегающим крестиком
+  function startCrossMinigame() {
+    crossJumps = 0;
+    let timeLeft = 5;
+    crossTimerSpan.textContent = timeLeft;
 
-    if (hintsAvailable <= 0) {
-      // Подсказок нет: предлагаем посмотреть Rewarded-видео за +3 подсказки
-      PG.showRewarded('get_hint', () => {
-        hintsAvailable += 3;
-        PG.saveProgress(currentLevelIdx, coreEnergy, hintsAvailable);
-        updateStats();
-        window.soundEngine.playHint();
-        triggerHint();
-      });
+    resetCrossPos();
+
+    clearInterval(crossTimerInterval);
+    crossTimerInterval = setInterval(() => {
+      timeLeft--;
+      crossTimerSpan.textContent = timeLeft;
+      if (timeLeft <= 0) {
+        clearInterval(crossTimerInterval);
+        // Не успел — базовый доход
+        grantAdReward(currentAd.reward, "Крестик ускользнул, но базовый просмотр зачтен.");
+      }
+    }, 1000);
+  }
+
+  function resetCrossPos() {
+    const maxX = crossField.clientWidth - 70;
+    const maxY = crossField.clientHeight - 40;
+    const rx = Math.max(10, Math.floor(Math.random() * maxX));
+    const ry = Math.max(10, Math.floor(Math.random() * maxY));
+    runawayCrossBtn.style.left = `${rx}px`;
+    runawayCrossBtn.style.top = `${ry}px`;
+  }
+
+  // При наведении / тапе крестик прыгает первые 3 раза
+  runawayCrossBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    crossJumps++;
+    if (crossJumps <= 3) {
+      window.sound.playMiss();
+      resetCrossPos();
+    } else {
+      // Поймал!
+      clearInterval(crossTimerInterval);
+      const total = currentAd.reward + currentAd.bonus + state.adBonus;
+      grantAdReward(total, "Великолепная реакция! Вы перехитрили рекламный алгоритм!");
+    }
+  });
+
+  // ================= СМЕНА (PLAYGAMA REWARDED VIDEO) =================
+  const SHIFT_COOLDOWN_MS = 10 * 60 * 1000; // 10 минут
+
+  function checkShiftCooldown() {
+    const now = Date.now();
+    const elapsed = now - state.lastShiftTimestamp;
+
+    if (state.shiftsToday >= 3) {
+      btnTakeShift.disabled = true;
+      shiftCooldownBar.classList.remove('hidden');
+      cooldownTimerText.textContent = "Лимит смен на сегодня исчерпан";
       return;
     }
 
-    triggerHint();
-  }
-
-  function triggerHint() {
-    const availableArrows = arrows.filter(a => a.state === 'IDLE');
-    const validArrow = availableArrows.find(a => canArrowEscape(a).clear);
-
-    if (validArrow) {
-      hintedArrowId = validArrow.id;
-      hintsAvailable--;
-      PG.saveProgress(currentLevelIdx, coreEnergy, hintsAvailable);
-      updateStats();
-      window.soundEngine.playHint();
+    if (elapsed < SHIFT_COOLDOWN_MS) {
+      btnTakeShift.disabled = true;
+      shiftCooldownBar.classList.remove('hidden');
+      const remainSec = Math.ceil((SHIFT_COOLDOWN_MS - elapsed) / 1000);
+      const mins = Math.floor(remainSec / 60);
+      const secs = remainSec % 60;
+      cooldownTimerText.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    } else {
+      btnTakeShift.disabled = false;
+      shiftCooldownBar.classList.add('hidden');
     }
   }
 
-  // Проверка завершения уровня
-  function checkVictory() {
-    const activeArrows = arrows.filter(a => a.state !== 'GONE');
-    if (activeArrows.length === 0 && !isLevelCompleted) {
-      isLevelCompleted = true;
-      window.soundEngine.playWin();
+  setInterval(checkShiftCooldown, 1000);
 
-      // Начисление энергии ядра
-      coreEnergy += 25;
-      PG.saveProgress(currentLevelIdx, coreEnergy, hintsAvailable);
-      updateProgressionUI();
-
-      // Показ Interstitial рекламы Playgama в паузе (каждые 2 уровня начиная с 3)
-      if (currentLevelIdx >= 3 && currentLevelIdx % 2 === 0) {
-        PG.showInterstitial('level_completed');
-      }
-
-      setTimeout(() => {
-        overlayClear.classList.remove('hidden');
-      }, 350);
+  btnTakeShift.addEventListener('click', () => {
+    const now = Date.now();
+    if (now - state.lastShiftTimestamp < SHIFT_COOLDOWN_MS) {
+      window.sound.playWarning();
+      return;
     }
-  }
-
-  // Обработка ввода (Pointer/Touch)
-  canvas.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    const touchX = e.clientX - rect.left;
-    const touchY = e.clientY - rect.top;
-
-    // Определяем клетку
-    const col = Math.floor((touchX - offsetX) / cellSize);
-    const row = Math.floor((touchY - offsetY) / cellSize);
-
-    if (
-      row >= 0 && row < currentLevelData.rows &&
-      col >= 0 && col < currentLevelData.cols
-    ) {
-      const clicked = arrows.find(a => a.r === row && a.c === col && a.state === 'IDLE');
-      if (clicked) {
-        tapArrow(clicked);
-      }
+    if (state.shiftsToday >= 3) {
+      window.sound.playWarning();
+      return;
     }
+
+    window.sound.playClick();
+
+    // Запуск реальной рекламы Playgama Rewarded Video
+    PG.showShiftRewarded(() => {
+      state.money += 1500;
+      state.realAdsWatchedTotal++;
+      state.shiftsToday++;
+      state.lastShiftTimestamp = Date.now();
+
+      window.sound.playCash();
+      showIncomeToast(1500);
+      updateAllUI();
+      PG.save();
+    });
   });
 
-  // Главный цикл отрисовки и анимации (Render Loop)
-  let lastTime = performance.now();
+  // ================= СПАТЬ / СЛЕДУЮЩИЙ ДЕНЬ =================
+  btnNextDay.addEventListener('click', () => {
+    window.sound.playClick();
+    advanceDay();
+  });
 
-  function gameLoop(time) {
-    const dt = Math.min((time - lastTime) / 1000, 0.1);
-    lastTime = time;
+  function advanceDay() {
+    state.day++;
 
-    // Очистка холста
-    ctx.save();
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, boardWidth, boardHeight);
+    // Сброс смен в новый день
+    state.shiftsToday = 0;
 
-    // Отрисовка сетки
-    drawGrid();
-
-    // Отрисовка стрелок
-    drawArrows(time);
-
-    // Отрисовка частиц
-    updateAndDrawParticles();
-
-    ctx.restore();
-
-    requestAnimationFrame(gameLoop);
-  }
-
-  function drawGrid() {
-    ctx.strokeStyle = 'rgba(79, 172, 254, 0.08)';
-    ctx.lineWidth = 1;
-
-    for (let r = 0; r <= currentLevelData.rows; r++) {
-      const y = offsetY + r * cellSize;
-      ctx.beginPath();
-      ctx.moveTo(offsetX, y);
-      ctx.lineTo(offsetX + currentLevelData.cols * cellSize, y);
-      ctx.stroke();
+    // Проверка дня аренды (день 8 = конец 7-го дня)
+    if (state.day > 7) {
+      showRentModal();
+      return;
     }
 
-    for (let c = 0; c <= currentLevelData.cols; c++) {
-      const x = offsetX + c * cellSize;
-      ctx.beginPath();
-      ctx.moveTo(x, offsetY);
-      ctx.lineTo(x, offsetY + currentLevelData.rows * cellSize);
-      ctx.stroke();
+    // Проверка случайного события дня (50% шанс)
+    triggerDailyEvent();
+    updateAllUI();
+    PG.save();
+  }
+
+  function triggerDailyEvent() {
+    const validEvents = window.GAME_DATA.DAILY_EVENTS.filter(ev => {
+      if (ev.condition && !ev.condition(state)) return false;
+      if (ev.once && ev.id === 'landlord_raise' && state.storyFlags.landlordRaised) return false;
+      if (ev.once && ev.id === 'freelance_orders' && state.storyFlags.deskBonus) return false;
+      if (ev.once && ev.id === 'window_world' && state.storyFlags.windowSeen) return false;
+      if (ev.once && ev.id === 'pc_disconnect_option' && state.storyFlags.pcUnlocked) return false;
+      return true;
+    });
+
+    if (validEvents.length > 0 && Math.random() < 0.6) {
+      const ev = validEvents[Math.floor(Math.random() * validEvents.length)];
+      if (ev.action) ev.action(state);
+
+      window.sound.playWarning();
+      eventIcon.textContent = ev.icon;
+      eventTitle.textContent = ev.title;
+      eventDesc.textContent = ev.text;
+
+      eventChoices.innerHTML = '';
+      ev.choices.forEach(ch => {
+        const btn = document.createElement('button');
+        btn.className = 'ad-choice-btn';
+        btn.textContent = ch.text;
+        btn.onclick = () => {
+          if (ch.cost) {
+            state.money = Math.max(0, state.money - ch.cost);
+          }
+          modalEvent.classList.add('hidden');
+          updateAllUI();
+          PG.save();
+        };
+        eventChoices.appendChild(btn);
+      });
+
+      modalEvent.classList.remove('hidden');
     }
   }
 
-  function drawArrows(time) {
-    const theme = themes[themeIdx];
+  // ================= АРЕНДА =================
+  function showRentModal() {
+    window.sound.playWarning();
+    rentBillSum.textContent = `${state.rentAmount.toLocaleString('ru-RU')} ₽`;
+    rentBillBalance.textContent = `${state.money.toLocaleString('ru-RU')} ₽`;
 
-    arrows.forEach(arrow => {
-      if (arrow.state === 'GONE') return;
+    rentActions.innerHTML = '';
+    const btnPay = document.createElement('button');
+    btnPay.className = 'primary-btn glow-btn';
 
-      // Плавная ротация
-      if (Math.abs(arrow.targetRotation - arrow.rotation) > 0.01) {
-        arrow.rotation += (arrow.targetRotation - arrow.rotation) * 0.18;
+    if (state.money >= state.rentAmount) {
+      btnPay.textContent = `ОПЛАТИТЬ АРЕНДУ (-${state.rentAmount} ₽)`;
+      btnPay.onclick = () => {
+        state.money -= state.rentAmount;
+        state.week++;
+        state.day = 1;
+        window.sound.playUpgrade();
+        modalRent.classList.add('hidden');
+        updateAllUI();
+        PG.save();
+      };
+    } else {
+      btnPay.textContent = 'ДЕНЕГ НЕ ХВАТАЕТ! ПОСМОТРЕТЬ РЕКЛАМУ';
+      btnPay.style.background = 'var(--accent-red)';
+      btnPay.onclick = () => {
+        modalRent.classList.add('hidden');
+        watchTvAd();
+      };
+    }
+
+    rentActions.appendChild(btnPay);
+    modalRent.classList.remove('hidden');
+  }
+
+  // ================= МАГАЗИН =================
+  btnOpenStore.addEventListener('click', () => {
+    window.sound.playClick();
+    renderStore();
+    modalStore.classList.remove('hidden');
+  });
+
+  function renderStore() {
+    const list = document.getElementById('store-items-list');
+    list.innerHTML = '';
+
+    window.GAME_DATA.STORE_ITEMS.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'store-item-card';
+
+      const isBought = item.id === 'apartment_deposit' ? false : state.furniture[item.id];
+
+      card.innerHTML = `
+        <div class="item-icon">${item.icon}</div>
+        <div class="item-info">
+          <div class="item-title">${item.name} — ${item.price.toLocaleString('ru-RU')} ₽</div>
+          <div class="item-desc">${item.desc}</div>
+        </div>
+      `;
+
+      if (isBought) {
+        const tag = document.createElement('span');
+        tag.className = 'item-bought-tag';
+        tag.textContent = '✓ В комнате';
+        card.appendChild(tag);
       } else {
-        arrow.rotation = arrow.targetRotation;
+        const buyBtn = document.createElement('button');
+        buyBtn.className = 'btn-buy-item';
+        buyBtn.textContent = 'Купить';
+        buyBtn.disabled = state.money < item.price;
+
+        buyBtn.onclick = () => {
+          if (state.money >= item.price) {
+            state.money -= item.price;
+            if (item.id === 'apartment_deposit') {
+              // Концовка 1 или 3!
+              modalStore.classList.add('hidden');
+              triggerEnding(state.realAdsWatchedTotal === 0 ? 'reject' : 'move_out');
+              return;
+            }
+
+            state.furniture[item.id] = true;
+            window.sound.playUpgrade();
+            renderStore();
+            updateAllUI();
+            PG.save();
+
+            // Проверка концовки 2: Дом из рекламы (все куплено + ПК)
+            if (state.furniture.desk && state.furniture.bed && state.furniture.window && state.furniture.pc) {
+              setTimeout(() => {
+                triggerEnding('ad_house');
+              }, 1200);
+            }
+          }
+        };
+        card.appendChild(buyBtn);
       }
 
-      let centerX = offsetX + (arrow.c + 0.5) * cellSize;
-      let centerY = offsetY + (arrow.r + 0.5) * cellSize;
-
-      // Анимация полета
-      if (arrow.state === 'FLYING') {
-        arrow.flyX += arrow.dir.dc * arrow.speed;
-        arrow.flyY += arrow.dir.dr * arrow.speed;
-        arrow.speed *= 1.05; // Ускорение вылета
-
-        centerX += arrow.flyX;
-        centerY += arrow.flyY;
-
-        // Частицы за летящей стрелкой
-        if (Math.random() < 0.6) {
-          particles.push({
-            x: centerX,
-            y: centerY,
-            vx: -arrow.dir.dc * (1 + Math.random() * 2),
-            vy: -arrow.dir.dr * (1 + Math.random() * 2),
-            life: 0.6,
-            decay: 0.05,
-            size: 2,
-            color: arrow.special === 'rotator' ? '#b537f2' : theme.arrowColor
-          });
-        }
-
-        // Проверка выхода за экран
-        if (
-          centerX < -100 || centerX > boardWidth + 100 ||
-          centerY < -100 || centerY > boardHeight + 100
-        ) {
-          arrow.state = 'GONE';
-          updateStats();
-          checkVictory();
-        }
-      }
-
-      // Анимация упругого отскока (Bump)
-      if (arrow.state === 'BUMPING') {
-        arrow.bumpProgress += 0.12;
-        const bumpSin = Math.sin(arrow.bumpProgress * Math.PI);
-
-        centerX += arrow.bumpVector.x * bumpSin;
-        centerY += arrow.bumpVector.y * bumpSin;
-
-        if (arrow.bumpProgress >= 1.0) {
-          arrow.state = 'IDLE';
-          arrow.bumpProgress = 0;
-        }
-      }
-
-      // Отрисовка стрелки
-      ctx.save();
-      ctx.translate(centerX, centerY);
-      ctx.rotate(arrow.rotation);
-
-      const size = cellSize * 0.72;
-      const isHinted = arrow.id === hintedArrowId;
-
-      // Свечение подсказки
-      if (isHinted) {
-        const pulse = 1 + Math.sin(time * 0.008) * 0.15;
-        ctx.scale(pulse, pulse);
-        ctx.shadowColor = '#fbbf24';
-        ctx.shadowBlur = 20;
-      } else {
-        ctx.shadowColor = arrow.special === 'rotator' ? '#b537f2' : theme.arrowGlow;
-        ctx.shadowBlur = 10;
-      }
-
-      // Тело блока со стрелкой (закругленный гексагональный чип)
-      ctx.fillStyle = arrow.special === 'rotator'
-        ? 'rgba(181, 55, 242, 0.22)'
-        : (isHinted ? 'rgba(251, 191, 36, 0.25)' : 'rgba(30, 41, 59, 0.9)');
-
-      ctx.strokeStyle = arrow.special === 'rotator'
-        ? '#b537f2'
-        : (isHinted ? '#fbbf24' : theme.arrowColor);
-
-      ctx.lineWidth = isHinted ? 2.5 : 1.8;
-
-      // Рисуем скругленный прямоугольник блока
-      roundRect(ctx, -size / 2, -size / 2, size, size, 12);
-      ctx.fill();
-      ctx.stroke();
-
-      // Внутренний символ стрелки
-      ctx.fillStyle = isHinted ? '#fbbf24' : (arrow.special === 'rotator' ? '#e9d5ff' : '#ffffff');
-      ctx.beginPath();
-      // Стрелка направлена вправо в локальной системе координат
-      const headSize = size * 0.32;
-      ctx.moveTo(headSize, 0);
-      ctx.lineTo(-headSize * 0.7, -headSize * 0.75);
-      ctx.lineTo(-headSize * 0.25, 0);
-      ctx.lineTo(-headSize * 0.7, headSize * 0.75);
-      ctx.closePath();
-      ctx.fill();
-
-      // Значок ротатора, если применимо
-      if (arrow.special === 'rotator') {
-        ctx.font = '10px sans-serif';
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText('⚡', -headSize * 0.5, headSize * 0.5);
-      }
-
-      ctx.restore();
+      list.appendChild(card);
     });
   }
 
-  function roundRect(ctx, x, y, width, height, radius) {
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-  }
+  // Закрытие модалок
+  document.querySelectorAll('.btn-close-dialog').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-close');
+      document.getElementById(targetId).classList.add('hidden');
+    });
+  });
 
-  function updateAndDrawParticles() {
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.life -= p.decay;
+  // ================= КОНЦОВКИ ИГРЫ =================
+  function triggerEnding(type) {
+    window.sound.playUpgrade();
+    endWeeks.textContent = state.week;
+    endFakeAds.textContent = state.fakeAdsWatchedTotal;
+    endRealAds.textContent = state.realAdsWatchedTotal;
 
-      if (p.life <= 0) {
-        particles.splice(i, 1);
-        continue;
-      }
-
-      ctx.fillStyle = p.color;
-      ctx.globalAlpha = p.life;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-      ctx.fill();
+    if (type === 'move_out') {
+      endingIcon.textContent = '🔑';
+      endingTitle.textContent = 'КОНЦОВКА: ВЫЕЗД';
+      endingText.textContent = 'Вы накопили на залог собственной квартиры! Выключаете телевизор, собираете немногочисленные вещи и выходите наружу на свежий ночной воздух. Вы свободны.';
+    } else if (type === 'ad_house') {
+      endingIcon.textContent = '📺';
+      endingTitle.textContent = 'КОНЦОВКА: ДОМ ИЗ РЕКЛАМЫ';
+      endingText.textContent = 'Комната обставлена всем необходимым. Экран телевизора и компьютера мерцает теплым неоновым светом. Вы поняли, что реклама — это и есть ваша жизнь. Вы остаетесь здесь навсегда в бесконечном комфортном сне.';
+    } else if (type === 'reject') {
+      endingIcon.textContent = '🕊️';
+      endingTitle.textContent = 'КОНЦОВКА: АБСОЛЮТНЫЙ ОТКАЗ';
+      endingText.textContent = 'Специальное достижение! Вы не посмотрели ни одной реальной рекламы, победив систему исключительно терпением и иронией. Вы очистили свой разум.';
     }
-    ctx.globalAlpha = 1.0;
+
+    modalEnding.classList.remove('hidden');
   }
 
-  // Кнопки интерфейса
-  btnNextLevel.addEventListener('click', () => {
-    loadLevel(currentLevelIdx + 1);
+  btnRestartGame.addEventListener('click', () => {
+    localStorage.removeItem(STATE_KEY);
+    location.reload();
   });
 
-  btnRestart.addEventListener('click', () => {
-    loadLevel(currentLevelIdx);
-  });
-
-  btnUndo.addEventListener('click', () => {
-    undoLastMove();
-  });
-
-  btnHint.addEventListener('click', () => {
-    giveHint();
+  // Кнопки тулбара
+  btnWatchTv.addEventListener('click', () => {
+    watchTvAd();
   });
 
   btnSound.addEventListener('click', () => {
-    const isOn = window.soundEngine.toggleSound();
-    btnSound.textContent = isOn ? '🔊' : '🔇';
+    const on = window.sound.toggle();
+    btnSound.textContent = on ? '🔊' : '🔇';
   });
 
-  btnTheme.addEventListener('click', () => {
-    themeIdx = (themeIdx + 1) % themes.length;
-    window.soundEngine.playHint();
+  btnLang.addEventListener('click', () => {
+    window.sound.playClick();
+    alert('Симулятор поддерживает русский язык (оригинал) и локализацию для каталога Playgama.');
   });
 
-  // Переключение языка (RU / EN)
-  if (btnLang) {
-    btnLang.addEventListener('click', () => {
-      const newLang = currentLang === 'ru' ? 'en' : 'ru';
-      applyLanguage(newLang);
-      updateProgressionUI();
-      window.soundEngine.playHint();
-    });
-  }
-
-  // Быстрый выбор уровня по клику на номер
-  elLevelNum.parentElement.style.cursor = 'pointer';
-  elLevelNum.parentElement.title = 'Нажмите для перехода к уровню';
-  elLevelNum.parentElement.addEventListener('click', () => {
-    const promptText = (I18N[currentLang] || I18N.en).levelPrompt;
-    const target = prompt(promptText, currentLevelIdx);
-    if (target) {
-      const num = parseInt(target, 10);
-      if (!isNaN(num) && num >= 1) {
-        loadLevel(num);
-      }
-    }
-  });
-
-  // Применяем язык, ресайз и запуск первого уровня
-  applyLanguage(currentLang);
-  resizeCanvas();
-  loadLevel(currentLevelIdx);
+  // Старт
+  loadLocalState();
+  updateAllUI();
   PG.init();
-  requestAnimationFrame(gameLoop);
 });

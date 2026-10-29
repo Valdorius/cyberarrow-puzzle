@@ -3,95 +3,301 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>CyberArrow: Circuit Escape</title>
-  <meta name="description" content="Тактильная логическая головоломка для Android на стыке Arrow Puzzle и кибернетической эстетики">
-  <meta name="theme-color" content="#0d1117">
+  <title>Симулятор Просмотра Рекламы</title>
+  <meta name="description" content="Ироничный симулятор жизни в съемной комнате, где аренда оплачивается вниманием к рекламе.">
+  <meta name="theme-color" content="#12151c">
   <link rel="stylesheet" href="style.css">
   <!-- Playgama Bridge SDK -->
   <script src="https://bridge.playgama.com/v2/stable/playgama-bridge.js"></script>
 </head>
 <body>
-  <div id="app" class="game-container">
-    <!-- Top Header / Meta Progress -->
-    <header class="game-header">
-      <div class="header-top">
-        <div class="header-controls-left">
-          <button id="btn-sound" class="icon-btn" aria-label="Звук" title="Звук">🔊</button>
-          <button id="btn-lang" class="icon-btn text-btn" aria-label="Language" title="Switch Language">RU</button>
+  <div id="game-root" class="game-wrapper">
+    <!-- Top HUD: Деньги, Календарь, Аренда -->
+    <header class="hud-header">
+      <div class="hud-top-row">
+        <div class="hud-pill calendar-pill">
+          <span class="hud-icon">📅</span>
+          <span>Нед. <b id="val-week">1</b>, День <b id="val-day">1</b>/7</span>
         </div>
-        <div class="level-indicator">
-          <span id="txt-level-label" class="level-label">УРОВЕНЬ</span>
-          <span id="level-number" class="level-value">1</span>
+
+        <div class="hud-controls">
+          <button id="btn-sound" class="icon-toggle-btn" title="Звук">🔊</button>
+          <button id="btn-lang" class="icon-toggle-btn text-toggle-btn" title="Язык">RU</button>
         </div>
-        <button id="btn-theme" class="icon-btn" aria-label="Тема" title="Сменить тему">✨</button>
       </div>
 
-      <!-- Meta Progression Bar: Core Restoration -->
-      <div class="core-progress-card">
-        <div class="core-status">
-          <span id="txt-core-title" class="core-title">🔋 Восстановление Ядра</span>
-          <span id="core-percent" class="core-val">0%</span>
+      <div class="hud-stats-row">
+        <div class="stat-card balance-card">
+          <span class="card-label">БАЛАНС:</span>
+          <div class="card-value-wrap">
+            <span class="currency-symbol">₽</span>
+            <span id="val-money" class="money-text">1,200</span>
+          </div>
         </div>
-        <div class="progress-bar-bg">
-          <div id="core-progress-fill" class="progress-bar-fill" style="width: 5%;"></div>
+
+        <div class="stat-card rent-card" id="card-rent-status">
+          <span class="card-label">АРЕНДА ЧЕРЕЗ:</span>
+          <div class="card-value-wrap">
+            <span id="val-rent-days" class="rent-highlight">6 дн.</span>
+            <span class="rent-total">(<span id="val-rent-amount">3,000</span> ₽)</span>
+          </div>
         </div>
-        <div id="core-milestone-text" class="core-milestone">Модуль 1: Питание шины данных</div>
       </div>
     </header>
 
-    <!-- Main Game Board Container -->
-    <main class="game-board-wrapper">
-      <div class="board-frame">
-        <canvas id="game-canvas"></canvas>
-      </div>
-      <div id="level-clear-overlay" class="level-clear-overlay hidden">
-        <div class="clear-card">
-          <div class="clear-icon">⚡</div>
-          <h2 id="txt-clear-title" class="clear-title">СЕКТОР ОЧИЩЕН!</h2>
-          <p id="txt-clear-stats" class="clear-subtitle">Все стрелки выведены без ошибок</p>
-          <div class="clear-reward">
-            <span id="txt-clear-reward">+25 Энергии Ядра</span>
-          </div>
-          <button id="btn-next-level" class="primary-btn glow-btn">СЛЕДУЮЩИЙ УРОВЕНЬ ➔</button>
-        </div>
+    <!-- Main Room Interactive Illustration -->
+    <main class="room-viewport">
+      <div class="room-canvas-container">
+        <!-- Интерактивная 2D сцена комнаты -->
+        <svg id="room-svg" viewBox="0 0 400 320" preserveAspectRatio="xMidYMid meet">
+          <!-- Задняя стена и обои -->
+          <rect x="0" y="0" width="400" height="230" fill="#181e2b" />
+          <line x1="0" y1="230" x2="400" y2="230" stroke="#0f131c" stroke-width="3" />
+
+          <!-- Пол -->
+          <polygon points="0,230 400,230 400,320 0,320" fill="#2d2218" />
+          <!-- Доски пола -->
+          <line x1="50" y1="230" x2="20" y2="320" stroke="#221911" stroke-width="2" />
+          <line x1="140" y1="230" x2="120" y2="320" stroke="#221911" stroke-width="2" />
+          <line x1="240" y1="230" x2="230" y2="320" stroke="#221911" stroke-width="2" />
+          <line x1="330" y1="230" x2="350" y2="320" stroke="#221911" stroke-width="2" />
+
+          <!-- Лампочка под потолком -->
+          <line x1="200" y1="0" x2="200" y2="45" stroke="#475569" stroke-width="2" />
+          <circle id="room-lamp" cx="200" cy="52" r="8" fill="#fbbf24" filter="drop-shadow(0 0 14px #fbbf24)" />
+
+          <!-- Окно / Шторы (Динамический элемент) -->
+          <g id="slot-window" class="room-slot">
+            <!-- Начальное состояние: стена с трещиной -->
+            <path id="window-crack" d="M 50 70 L 65 90 L 55 110 L 70 130" stroke="#0f172a" stroke-width="2" fill="none" />
+            <!-- Содержимое окна при покупке -->
+            <g id="window-content" style="display: none;">
+              <rect x="35" y="45" width="80" height="110" fill="#0369a1" rx="4" />
+              <!-- Неоновый свет города и дождь -->
+              <rect x="42" y="52" width="66" height="96" fill="#021427" />
+              <line x1="55" y1="70" x2="55" y2="120" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,3" />
+              <line x1="75" y1="60" x2="75" y2="130" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,3" />
+              <!-- Рама окна -->
+              <line x1="75" y1="45" x2="75" y2="155" stroke="#334155" stroke-width="3" />
+              <line x1="35" y1="100" x2="115" y2="100" stroke="#334155" stroke-width="3" />
+              <!-- Уютные шторы по бокам -->
+              <path d="M 32 45 Q 48 100 35 155 L 28 155 Z" fill="#b91c1c" />
+              <path d="M 118 45 Q 102 100 115 155 L 122 155 Z" fill="#b91c1c" />
+            </g>
+          </g>
+
+          <!-- Спальное место (Коробка / Кровать) -->
+          <g id="slot-bed" class="room-slot">
+            <!-- Картонка по умолчанию -->
+            <g id="bed-default">
+              <rect x="20" y="240" width="120" height="40" rx="3" fill="#854d0e" stroke="#5a3307" stroke-width="2" />
+              <text x="80" y="265" font-size="10" fill="#fef08a" text-anchor="middle" font-family="monospace">КОРОБКА ТЕПЛАЯ</text>
+              <rect x="25" y="235" width="35" height="25" rx="3" fill="#cbd5e1" opacity="0.7" />
+            </g>
+            <!-- Настоящая кровать при покупке -->
+            <g id="bed-upgraded" style="display: none;">
+              <!-- Каркас кровати -->
+              <rect x="18" y="215" width="125" height="20" rx="4" fill="#475569" />
+              <rect x="20" y="230" width="120" height="45" rx="4" fill="#1e3a8a" />
+              <!-- Подушка и плед -->
+              <rect x="24" y="224" width="36" height="22" rx="4" fill="#f8fafc" />
+              <path d="M 60 230 L 140 230 L 140 275 L 60 275 Z" fill="#3b82f6" opacity="0.9" />
+              <line x1="60" y1="230" x2="60" y2="275" stroke="#1d4ed8" stroke-width="2" />
+            </g>
+          </g>
+
+          <!-- Стол и Компьютер -->
+          <g id="slot-desk" class="room-slot">
+            <g id="desk-content" style="display: none;">
+              <!-- Столешница и ножки -->
+              <polygon points="260,205 385,205 395,225 250,225" fill="#78350f" stroke="#451a03" stroke-width="2" />
+              <rect x="255" y="225" width="8" height="60" fill="#451a03" />
+              <rect x="382" y="225" width="8" height="60" fill="#451a03" />
+              <!-- Чашка кофе и блокнот -->
+              <rect x="360" y="196" width="12" height="12" rx="2" fill="#e2e8f0" />
+              <rect x="270" y="208" width="22" height="12" rx="1" fill="#fef08a" />
+            </g>
+            <g id="pc-content" style="display: none;">
+              <!-- Монитор -->
+              <rect x="300" y="150" width="55" height="42" rx="3" fill="#0f172a" stroke="#00f2fe" stroke-width="2" />
+              <rect x="304" y="154" width="47" height="34" fill="#022c22" />
+              <text x="308" y="172" font-size="9" fill="#10b981" font-family="monospace">&gt;_RUN</text>
+              <rect x="324" y="192" width="7" height="13" fill="#334155" />
+              <rect x="315" y="204" width="25" height="3" fill="#64748b" />
+            </g>
+          </g>
+
+          <!-- Телевизор (Главный алтарь внимания) -->
+          <g id="slot-tv" class="room-slot">
+            <!-- Тумба под ТВ -->
+            <rect x="155" y="210" width="90" height="50" rx="3" fill="#334155" stroke="#1e293b" stroke-width="2" />
+            <line x1="200" y1="210" x2="200" y2="260" stroke="#1e293b" stroke-width="2" />
+            <!-- Корпус старого CRT ТВ -->
+            <rect x="150" y="135" width="100" height="75" rx="10" fill="#1c1917" stroke="#44403c" stroke-width="3" />
+            <!-- Экран ТВ -->
+            <rect id="svg-tv-screen" x="158" y="143" width="72" height="58" rx="8" fill="#0284c7" opacity="0.85" filter="drop-shadow(0 0 10px #0284c7)" />
+            <!-- Динамическая картинка в ТВ -->
+            <text x="194" y="176" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle" font-family="sans-serif">РЕКЛАМА</text>
+            <!-- Регуляторы и динамик на ТВ -->
+            <circle cx="238" cy="155" r="4" fill="#78716c" />
+            <circle cx="238" cy="168" r="4" fill="#78716c" />
+            <rect x="233" y="180" width="10" height="16" rx="1" fill="#292524" />
+            <!-- Антенна-рога -->
+            <line x1="190" y1="135" x2="175" y2="108" stroke="#78716c" stroke-width="2" />
+            <line x1="210" y1="135" x2="225" y2="108" stroke="#78716c" stroke-width="2" />
+          </g>
+        </svg>
+
+        <!-- Всплывающий индикатор дохода (+180 ₽) -->
+        <div id="income-toast" class="floating-toast hidden">+180 ₽</div>
       </div>
     </main>
 
-    <!-- Bottom Controls & Hints -->
-    <footer class="game-footer">
-      <div class="moves-bar">
-        <div class="stat-pill">
-          <span id="txt-remaining-label" class="stat-label">ОСТАЛОСЬ:</span>
-          <span id="remaining-arrows" class="stat-value">0</span>
+    <!-- Bottom Actions Hub -->
+    <footer class="action-footer">
+      <!-- Главная большая кнопка: Смотреть ТВ -->
+      <button id="btn-watch-tv" class="primary-action-btn tv-pulse-btn">
+        <span class="btn-main-icon">📺</span>
+        <div class="btn-main-text">
+          <span class="title">СМОТРЕТЬ ТВ-РЕКЛАМУ</span>
+          <span class="subtitle">Оплачивай аренду вниманием (+150-200 ₽)</span>
         </div>
-        <div class="stat-pill">
-          <span id="txt-moves-label" class="stat-label">ХОДОВ:</span>
-          <span id="moves-count" class="stat-value">0</span>
-        </div>
+      </button>
+
+      <!-- Вспомогательные кнопки в 3 колонки -->
+      <div class="secondary-actions-row">
+        <!-- Кнопка 1: Магазин мебели -->
+        <button id="btn-open-store" class="hub-btn">
+          <span class="hub-icon">🛒</span>
+          <span class="hub-title">Мебель</span>
+        </button>
+
+        <!-- Кнопка 2: Взять смену (Playgama Rewarded Video) -->
+        <button id="btn-take-shift" class="hub-btn shift-btn" title="Посмотреть рекламу спонсора для ускорения">
+          <span class="hub-icon">🎬</span>
+          <div class="shift-text-wrap">
+            <span class="hub-title">Смена</span>
+            <span id="shift-reward-label" class="shift-tag">+1,500 ₽</span>
+          </div>
+          <span id="shift-counter-badge" class="badge-pill">3/3</span>
+        </button>
+
+        <!-- Кнопка 3: Спать / След. день -->
+        <button id="btn-next-day" class="hub-btn">
+          <span class="hub-icon">💤</span>
+          <span class="hub-title">Спать</span>
+        </button>
       </div>
 
-      <div class="action-buttons">
-        <button id="btn-restart" class="action-btn" title="Сбросить уровень">
-          <span class="btn-icon">↺</span>
-          <span id="txt-btn-restart" class="btn-text">Сброс</span>
-        </button>
-
-        <button id="btn-undo" class="action-btn" title="Отменить ход">
-          <span class="btn-icon">↶</span>
-          <span id="txt-btn-undo" class="btn-text">Назад</span>
-        </button>
-
-        <button id="btn-hint" class="action-btn action-btn-accent" title="Подсказка">
-          <span class="btn-icon">💡</span>
-          <span id="txt-btn-hint" class="btn-text">Подсказка</span>
-          <span id="hint-badge" class="badge">3</span>
-        </button>
+      <!-- Строка статуса смены (таймер кулдауна 10 мин) -->
+      <div id="shift-cooldown-bar" class="cooldown-notice hidden">
+        <span>Кулдаун смены: <b id="cooldown-timer">10:00</b></span>
       </div>
     </footer>
+
+    <!-- ================= МОДАЛЬНЫЕ ОКНА ================= -->
+
+    <!-- Модалка 1: CRT Телевизор (Просмотр фейковой рекламы) -->
+    <div id="modal-tv" class="modal-overlay hidden">
+      <div class="tv-box">
+        <div class="tv-screen-glass">
+          <div class="scanlines"></div>
+          
+          <div class="ad-content-wrapper">
+            <div class="ad-sponsor-badge" id="ad-category">СПОНСОР ЭФИРА</div>
+            <div class="ad-big-icon" id="ad-icon">🧦</div>
+            <h2 class="ad-title" id="ad-title">Носки, которые чувствуют</h2>
+            <p class="ad-slogan" id="ad-slogan">Они знают, когда вам грустно, и греют сильнее.</p>
+
+            <!-- Контейнер для выбора / интерактивности -->
+            <div id="ad-choices-container" class="ad-choices-container">
+              <!-- Кнопки действий генерируются скриптом -->
+            </div>
+
+            <!-- Мини-игра «Убегающий крестик» -->
+            <div id="ad-cross-minigame" class="minigame-container hidden">
+              <p class="minigame-instructions">Поймайте крестик за <span id="cross-timer">5</span> сек!</p>
+              <div class="cross-playfield" id="cross-field">
+                <button id="runaway-cross" class="runaway-btn">[ ✕ ]</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модалка 2: Магазин мебели и улучшений -->
+    <div id="modal-store" class="modal-overlay hidden">
+      <div class="app-dialog-card">
+        <div class="dialog-header">
+          <h3>🛒 МЕБЕЛЬ И УЛУЧШЕНИЯ</h3>
+          <button class="btn-close-dialog" data-close="modal-store">✕</button>
+        </div>
+        <p class="dialog-intro">Обустраивайте комнату. Каждая вещь открывает новые события в сюжете!</p>
+
+        <div id="store-items-list" class="store-list">
+          <!-- Генерируется из GAME_DATA.STORE_ITEMS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Модалка 3: Дневные и Сюжетные События -->
+    <div id="modal-event" class="modal-overlay hidden">
+      <div class="app-dialog-card event-card">
+        <div class="event-icon" id="event-icon">🔨</div>
+        <h3 id="event-title">Сосед стучит по батарее</h3>
+        <p id="event-desc">Сосед за стеной делает бесконечный ремонт и барабанит ключом по трубе.</p>
+        <div id="event-choices" class="event-choices-row">
+          <!-- Кнопки выбора генерируются скриптом -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Модалка 4: День оплаты Аренды (День 7) -->
+    <div id="modal-rent" class="modal-overlay hidden">
+      <div class="app-dialog-card rent-dialog">
+        <div class="rent-landlord-avatar">🚪</div>
+        <h3 id="rent-title">ХОЗЯИН ПРИШЕЛ ЗА АРЕНДОЙ</h3>
+        <p id="rent-desc">Прошла неделя. Пора платить за квадратные метры внимания.</p>
+
+        <div class="rent-bill-box">
+          <div class="bill-row">
+            <span>К оплате:</span>
+            <span class="bill-sum" id="rent-bill-sum">3,000 ₽</span>
+          </div>
+          <div class="bill-row">
+            <span>Ваш баланс:</span>
+            <span class="bill-balance" id="rent-bill-balance">3,450 ₽</span>
+          </div>
+        </div>
+
+        <div id="rent-actions" class="rent-actions-container">
+          <button id="btn-pay-rent" class="primary-btn glow-btn">ОПЛАТИТЬ И ОСТАТЬСЯ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модалка 5: Финал игры / Концовки -->
+    <div id="modal-ending" class="modal-overlay hidden">
+      <div class="app-dialog-card ending-dialog">
+        <div class="ending-badge" id="ending-icon">🔑</div>
+        <h2 id="ending-title">КОНЦОВКА: ВЫЕЗД</h2>
+        <p id="ending-text" class="ending-paragraph">Вы накопили залог, попрощались с телевизором и навсегда покинули эту тесную комнату.</p>
+        
+        <div class="ending-stats-box">
+          <div class="end-stat">Прожито недель: <b id="end-weeks">4</b></div>
+          <div class="end-stat">Просмотрено ТВ-роликов: <b id="end-fake-ads">86</b></div>
+          <div class="end-stat">Реальных смен взято: <b id="end-real-ads">0</b></div>
+        </div>
+
+        <button id="btn-restart-game" class="primary-btn">НАЧАТЬ ЗАНОВО ↺</button>
+      </div>
+    </div>
+
   </div>
 
   <script src="audio.js"></script>
-  <script src="levels.js"></script>
+  <script src="ads_and_events.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

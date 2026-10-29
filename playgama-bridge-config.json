@@ -2,18 +2,18 @@
   "gameId": "cmvt19xwl0lucj00havynxb3u",
   "version": "1.0.0",
   "advertisement": {
-    "minimumDelayBetweenInterstitial": 60,
+    "minimumDelayBetweenInterstitial": 120,
     "interstitial": {
       "placements": [
         {
-          "id": "level_completed"
+          "id": "week_completed"
         }
       ]
     },
     "rewarded": {
       "placements": [
         {
-          "id": "get_hint"
+          "id": "take_shift"
         }
       ]
     }
