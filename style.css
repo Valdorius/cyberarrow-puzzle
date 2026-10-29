@@ -62,6 +62,19 @@ html, body {
   align-items: center;
 }
 
+.header-controls-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.text-btn {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--accent-cyan);
+}
+
 .icon-btn {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);

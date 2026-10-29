@@ -15,9 +15,12 @@
     <!-- Top Header / Meta Progress -->
     <header class="game-header">
       <div class="header-top">
-        <button id="btn-sound" class="icon-btn" aria-label="Звук" title="Звук">🔊</button>
+        <div class="header-controls-left">
+          <button id="btn-sound" class="icon-btn" aria-label="Звук" title="Звук">🔊</button>
+          <button id="btn-lang" class="icon-btn text-btn" aria-label="Language" title="Switch Language">RU</button>
+        </div>
         <div class="level-indicator">
-          <span class="level-label">УРОВЕНЬ</span>
+          <span id="txt-level-label" class="level-label">УРОВЕНЬ</span>
           <span id="level-number" class="level-value">1</span>
         </div>
         <button id="btn-theme" class="icon-btn" aria-label="Тема" title="Сменить тему">✨</button>
@@ -26,7 +29,7 @@
       <!-- Meta Progression Bar: Core Restoration -->
       <div class="core-progress-card">
         <div class="core-status">
-          <span class="core-title">🔋 Восстановление Ядра</span>
+          <span id="txt-core-title" class="core-title">🔋 Восстановление Ядра</span>
           <span id="core-percent" class="core-val">0%</span>
         </div>
         <div class="progress-bar-bg">
@@ -44,10 +47,10 @@
       <div id="level-clear-overlay" class="level-clear-overlay hidden">
         <div class="clear-card">
           <div class="clear-icon">⚡</div>
-          <h2 class="clear-title">СЕКТОР ОЧИЩЕН!</h2>
-          <p id="clear-stats" class="clear-subtitle">Все стрелки выведены без ошибок</p>
+          <h2 id="txt-clear-title" class="clear-title">СЕКТОР ОЧИЩЕН!</h2>
+          <p id="txt-clear-stats" class="clear-subtitle">Все стрелки выведены без ошибок</p>
           <div class="clear-reward">
-            <span>+25 Энергии Ядра</span>
+            <span id="txt-clear-reward">+25 Энергии Ядра</span>
           </div>
           <button id="btn-next-level" class="primary-btn glow-btn">СЛЕДУЮЩИЙ УРОВЕНЬ ➔</button>
         </div>
@@ -58,11 +61,11 @@
     <footer class="game-footer">
       <div class="moves-bar">
         <div class="stat-pill">
-          <span class="stat-label">ОСТАЛОСЬ:</span>
+          <span id="txt-remaining-label" class="stat-label">ОСТАЛОСЬ:</span>
           <span id="remaining-arrows" class="stat-value">0</span>
         </div>
         <div class="stat-pill">
-          <span class="stat-label">ХОДОВ:</span>
+          <span id="txt-moves-label" class="stat-label">ХОДОВ:</span>
           <span id="moves-count" class="stat-value">0</span>
         </div>
       </div>
@@ -70,17 +73,17 @@
       <div class="action-buttons">
         <button id="btn-restart" class="action-btn" title="Сбросить уровень">
           <span class="btn-icon">↺</span>
-          <span class="btn-text">Сброс</span>
+          <span id="txt-btn-restart" class="btn-text">Сброс</span>
         </button>
 
         <button id="btn-undo" class="action-btn" title="Отменить ход">
           <span class="btn-icon">↶</span>
-          <span class="btn-text">Назад</span>
+          <span id="txt-btn-undo" class="btn-text">Назад</span>
         </button>
 
         <button id="btn-hint" class="action-btn action-btn-accent" title="Подсказка">
           <span class="btn-icon">💡</span>
-          <span class="btn-text">Подсказка</span>
+          <span id="txt-btn-hint" class="btn-text">Подсказка</span>
           <span id="hint-badge" class="badge">3</span>
         </button>
       </div>

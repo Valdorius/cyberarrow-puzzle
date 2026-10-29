@@ -17,7 +17,94 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnUndo = document.getElementById('btn-undo');
   const btnHint = document.getElementById('btn-hint');
   const btnSound = document.getElementById('btn-sound');
+  const btnLang = document.getElementById('btn-lang');
   const btnTheme = document.getElementById('btn-theme');
+
+  // Текстовые элементы локализации
+  const txtLevelLabel = document.getElementById('txt-level-label');
+  const txtCoreTitle = document.getElementById('txt-core-title');
+  const txtClearTitle = document.getElementById('txt-clear-title');
+  const txtClearStats = document.getElementById('txt-clear-stats');
+  const txtClearReward = document.getElementById('txt-clear-reward');
+  const txtRemainingLabel = document.getElementById('txt-remaining-label');
+  const txtMovesLabel = document.getElementById('txt-moves-label');
+  const txtBtnRestart = document.getElementById('txt-btn-restart');
+  const txtBtnUndo = document.getElementById('txt-btn-undo');
+  const txtBtnHint = document.getElementById('txt-btn-hint');
+
+  // Словарь локализации (Русский / Английский)
+  const I18N = {
+    ru: {
+      levelLabel: "УРОВЕНЬ",
+      coreTitle: "🔋 Восстановление Ядра",
+      clearTitle: "СЕКТОР ОЧИЩЕН!",
+      clearSubtitle: "Все стрелки выведены без ошибок",
+      clearReward: "+25 Энергии Ядра",
+      nextBtn: "СЛЕДУЮЩИЙ УРОВЕНЬ ➔",
+      remainingLabel: "ОСТАЛОСЬ:",
+      movesLabel: "ХОДОВ:",
+      resetBtn: "Сброс",
+      undoBtn: "Назад",
+      hintBtn: "Подсказка",
+      levelPrompt: "Перейти к уровню (1-100):",
+      milestones: [
+        { threshold: 0, text: "Модуль 1: Питание шины данных" },
+        { threshold: 100, text: "Модуль 2: Квантовый буфер маршрутизации" },
+        { threshold: 250, text: "Модуль 3: Оптический коммутатор импульсов" },
+        { threshold: 450, text: "Модуль 4: Синхронизатор потоков ядра" },
+        { threshold: 750, text: "Модуль 5: Автономный нейроматричный шлюз" }
+      ]
+    },
+    en: {
+      levelLabel: "SECTOR",
+      coreTitle: "🔋 Core Restoration",
+      clearTitle: "SECTOR CLEARED!",
+      clearSubtitle: "All data streams released successfully",
+      clearReward: "+25 Core Energy",
+      nextBtn: "NEXT SECTOR ➔",
+      remainingLabel: "REMAINING:",
+      movesLabel: "MOVES:",
+      resetBtn: "Reset",
+      undoBtn: "Undo",
+      hintBtn: "Hint",
+      levelPrompt: "Jump to sector (1-100):",
+      milestones: [
+        { threshold: 0, text: "Module 1: Bus Power Grid" },
+        { threshold: 100, text: "Module 2: Quantum Route Buffer" },
+        { threshold: 250, text: "Module 3: Optical Pulse Switch" },
+        { threshold: 450, text: "Module 4: Core Stream Sync" },
+        { threshold: 750, text: "Module 5: Autonomous Neural Gateway" }
+      ]
+    }
+  };
+
+  let currentLang = 'ru';
+  function detectLanguage() {
+    const saved = localStorage.getItem('cyberarrow_lang');
+    if (saved === 'ru' || saved === 'en') return saved;
+    const sysLang = (window.bridge && window.bridge.platform && window.bridge.platform.language) || navigator.language || 'en';
+    return (sysLang.toLowerCase().startsWith('ru') || sysLang.toLowerCase().startsWith('be') || sysLang.toLowerCase().startsWith('uk')) ? 'ru' : 'en';
+  }
+  currentLang = detectLanguage();
+
+  function applyLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('cyberarrow_lang', lang);
+    const t = I18N[lang] || I18N.en;
+
+    if (btnLang) btnLang.textContent = lang.toUpperCase();
+    if (txtLevelLabel) txtLevelLabel.textContent = t.levelLabel;
+    if (txtCoreTitle) txtCoreTitle.textContent = t.coreTitle;
+    if (txtClearTitle) txtClearTitle.textContent = t.clearTitle;
+    if (txtClearStats) txtClearStats.textContent = t.clearSubtitle;
+    if (txtClearReward) txtClearReward.textContent = t.clearReward;
+    if (btnNextLevel) btnNextLevel.textContent = t.nextBtn;
+    if (txtRemainingLabel) txtRemainingLabel.textContent = t.remainingLabel;
+    if (txtMovesLabel) txtMovesLabel.textContent = t.movesLabel;
+    if (txtBtnRestart) txtBtnRestart.textContent = t.resetBtn;
+    if (txtBtnUndo) txtBtnUndo.textContent = t.undoBtn;
+    if (txtBtnHint) txtBtnHint.textContent = t.hintBtn;
+  }
 
   // Playgama Bridge SDK Wrapper
   const PG = {
@@ -281,8 +368,9 @@ document.addEventListener('DOMContentLoaded', () => {
     elCorePercent.textContent = `${pct}%`;
     elCoreFill.style.width = `${Math.max(pct, 4)}%`;
 
-    let activeMilestone = MILESTONES[0].text;
-    for (const m of MILESTONES) {
+    const msList = (I18N[currentLang] || I18N.en).milestones;
+    let activeMilestone = msList[0].text;
+    for (const m of msList) {
       if (coreEnergy >= m.threshold) {
         activeMilestone = m.text;
       }
@@ -751,11 +839,22 @@ document.addEventListener('DOMContentLoaded', () => {
     window.soundEngine.playHint();
   });
 
+  // Переключение языка (RU / EN)
+  if (btnLang) {
+    btnLang.addEventListener('click', () => {
+      const newLang = currentLang === 'ru' ? 'en' : 'ru';
+      applyLanguage(newLang);
+      updateProgressionUI();
+      window.soundEngine.playHint();
+    });
+  }
+
   // Быстрый выбор уровня по клику на номер
   elLevelNum.parentElement.style.cursor = 'pointer';
   elLevelNum.parentElement.title = 'Нажмите для перехода к уровню';
   elLevelNum.parentElement.addEventListener('click', () => {
-    const target = prompt(`Перейти к уровню (1-100):`, currentLevelIdx);
+    const promptText = (I18N[currentLang] || I18N.en).levelPrompt;
+    const target = prompt(promptText, currentLevelIdx);
     if (target) {
       const num = parseInt(target, 10);
       if (!isNaN(num) && num >= 1) {
@@ -764,7 +863,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Запуск первого уровня и ресайз
+  // Применяем язык, ресайз и запуск первого уровня
+  applyLanguage(currentLang);
   resizeCanvas();
   loadLevel(currentLevelIdx);
   PG.init();
