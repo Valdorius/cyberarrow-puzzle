@@ -1,4 +1,4 @@
-// Модуль генерации уровней с математической гарантией проходимости (Reverse Step Algorithm)
+// Модуль генерации уровней с математической гарантией проходимости и валидатором
 
 const DIRS = {
   UP: { name: 'UP', dr: -1, dc: 0, angle: -Math.PI / 2, icon: '▲' },
@@ -34,46 +34,109 @@ class LevelManager {
           [null, { dir: 'DOWN' }, { dir: 'DOWN' }]
         ]
       },
-      // Уровень 3: Замкнутые цепочки (4x4)
+      // Уровень 3: Каскадные разблокировки (4x4) - Проверен и 100% проходим
       {
         rows: 4,
         cols: 4,
         name: "Лабиринт шин",
         grid: [
-          [{ dir: 'RIGHT' }, { dir: 'DOWN' }, { dir: 'DOWN' }, { dir: 'RIGHT' }],
-          [{ dir: 'UP' }, { dir: 'LEFT' }, { dir: 'RIGHT' }, { dir: 'DOWN' }],
-          [{ dir: 'UP' }, { dir: 'UP' }, { dir: 'DOWN' }, { dir: 'RIGHT' }],
-          [{ dir: 'LEFT' }, { dir: 'LEFT' }, { dir: 'RIGHT' }, { dir: 'UP' }]
+          [{ dir: 'UP' },   { dir: 'RIGHT' }, { dir: 'DOWN' },  { dir: 'RIGHT' }],
+          [{ dir: 'LEFT' }, { dir: 'UP' },    { dir: 'DOWN' },  { dir: 'RIGHT' }],
+          [{ dir: 'LEFT' }, { dir: 'LEFT' },  { dir: 'RIGHT' }, { dir: 'DOWN' }],
+          [{ dir: 'DOWN' }, { dir: 'LEFT' },  { dir: 'DOWN' },  { dir: 'DOWN' }]
         ]
       },
-      // Уровень 4: Введение поворотного элемента (Rotator)
+      // Уровень 4: Введение поворотного элемента (Rotator) - Проверен и 100% проходим
       {
         rows: 4,
         cols: 4,
         name: "Квантовый ротатор",
         grid: [
-          [{ dir: 'RIGHT' }, { dir: 'DOWN', special: 'rotator' }, { dir: 'DOWN' }, null],
-          [{ dir: 'LEFT' }, { dir: 'UP' }, { dir: 'RIGHT' }, { dir: 'RIGHT' }],
-          [{ dir: 'UP' }, { dir: 'LEFT' }, { dir: 'DOWN' }, { dir: 'DOWN' }],
-          [null, { dir: 'LEFT' }, { dir: 'RIGHT' }, { dir: 'UP' }]
+          [{ dir: 'LEFT' }, { dir: 'UP', special: 'rotator' }, { dir: 'UP' },   { dir: 'RIGHT' }],
+          [{ dir: 'LEFT' }, { dir: 'RIGHT' },                  { dir: 'DOWN' }, { dir: 'RIGHT' }],
+          [{ dir: 'LEFT' }, { dir: 'UP' },                     { dir: 'DOWN' }, { dir: 'RIGHT' }],
+          [{ dir: 'LEFT' }, { dir: 'DOWN' },                   { dir: 'DOWN' }, { dir: 'RIGHT' }]
         ]
       }
     ];
   }
 
-  // Генератор уровня с обратной прокруткой (Reverse Solve)
-  generateLevel(levelIndex) {
-    if (levelIndex <= this.handcrafted.length) {
-      return this.cloneLevel(this.handcrafted[levelIndex - 1]);
+  // Математический валидатор: проверяет, что поле можно полностью очистить
+  isSolvable(lvl) {
+    const grid = lvl.grid.map(row => row.map(cell => cell ? { ...cell } : null));
+    let total = 0;
+    let removed = 0;
+
+    for (let r = 0; r < lvl.rows; r++) {
+      for (let c = 0; c < lvl.cols; c++) {
+        if (grid[r][c]) total++;
+      }
     }
 
-    // Параметры сетки растут плавно с уровнем
-    const sizeProgress = Math.min(levelIndex - this.handcrafted.length, 30);
-    const rows = 4 + Math.floor(sizeProgress / 8); // 4x4 -> 5x5 -> 6x6 max
-    const cols = 4 + Math.floor(sizeProgress / 10);
-    const targetArrows = Math.floor(rows * cols * 0.75);
+    let progress = true;
+    while (progress) {
+      progress = false;
+      for (let r = 0; r < lvl.rows; r++) {
+        for (let c = 0; c < lvl.cols; c++) {
+          const cell = grid[r][c];
+          if (!cell) continue;
 
-    // Создаем пустую сетку
+          const dir = DIRS[cell.dir];
+          let clear = true;
+          let cr = r + dir.dr;
+          let cc = c + dir.dc;
+
+          while (cr >= 0 && cr < lvl.rows && cc >= 0 && cc < lvl.cols) {
+            if (grid[cr][cc] !== null) {
+              clear = false;
+              break;
+            }
+            cr += dir.dr;
+            cc += dir.dc;
+          }
+
+          if (clear) {
+            grid[r][c] = null;
+            removed++;
+            progress = true;
+          }
+        }
+      }
+    }
+
+    return total === removed;
+  }
+
+  // Генератор уровня с обратной сборкой и автоматической верификацией
+  generateLevel(levelIndex) {
+    // 1. Проверяем ручные уровни
+    if (levelIndex <= this.handcrafted.length) {
+      const candidate = this.cloneLevel(this.handcrafted[levelIndex - 1]);
+      if (this.isSolvable(candidate)) {
+        return candidate;
+      }
+    }
+
+    // 2. Процедурная генерация с гарантированной валидацией
+    let attempts = 0;
+    while (attempts < 20) {
+      attempts++;
+      const generated = this._createProceduralLevel(levelIndex);
+      if (this.isSolvable(generated)) {
+        return generated;
+      }
+    }
+
+    // Fallback: безопасный гарантированный уровень
+    return this._createSafeFallbackLevel(levelIndex);
+  }
+
+  _createProceduralLevel(levelIndex) {
+    const sizeProgress = Math.min(Math.max(0, levelIndex - 4), 30);
+    const rows = 4 + Math.floor(sizeProgress / 8); // 4 -> 5 -> 6
+    const cols = 4 + Math.floor(sizeProgress / 10);
+    const targetArrows = Math.floor(rows * cols * 0.72);
+
     const grid = Array.from({ length: rows }, () => Array(cols).fill(null));
     const emptyCells = [];
     for (let r = 0; r < rows; r++) {
@@ -83,17 +146,13 @@ class LevelManager {
     }
 
     let placedCount = 0;
-    let attempts = 0;
+    let placeAttempts = 0;
 
-    // В реверсном алгоритме стрелка залетает с края на свободную клетку.
-    // Чтобы стрелка с направлением D могла залететь на клетку (r, c),
-    // путь от границы в направлении D до (r, c) должен быть СВОБОДЕН в момент прилета.
-    while (placedCount < targetArrows && attempts < 400 && emptyCells.length > 0) {
-      attempts++;
+    while (placedCount < targetArrows && placeAttempts < 500 && emptyCells.length > 0) {
+      placeAttempts++;
       const randIdx = Math.floor(Math.random() * emptyCells.length);
       const { r, c } = emptyCells[randIdx];
 
-      // Проверяем все 4 направления, откуда стрелка могла бы вылететь
       const validDirections = [];
 
       for (const dKey of DIR_KEYS) {
@@ -118,9 +177,7 @@ class LevelManager {
 
       if (validDirections.length > 0) {
         const chosenDir = validDirections[Math.floor(Math.random() * validDirections.length)];
-        
-        // 10% шанс создать поворотную стрелку на уровнях выше 5
-        const isRotator = levelIndex >= 5 && Math.random() < 0.12;
+        const isRotator = levelIndex >= 4 && Math.random() < 0.1;
 
         grid[r][c] = {
           dir: chosenDir,
@@ -137,6 +194,22 @@ class LevelManager {
       cols,
       name: `Сектор #${levelIndex}`,
       grid
+    };
+  }
+
+  _createSafeFallbackLevel(levelIndex) {
+    const rows = 4;
+    const cols = 4;
+    return {
+      rows,
+      cols,
+      name: `Сектор #${levelIndex}`,
+      grid: [
+        [{ dir: 'UP' },   { dir: 'RIGHT' }, { dir: 'DOWN' },  { dir: 'RIGHT' }],
+        [{ dir: 'LEFT' }, { dir: 'UP' },    { dir: 'DOWN' },  { dir: 'RIGHT' }],
+        [{ dir: 'LEFT' }, { dir: 'LEFT' },  { dir: 'RIGHT' }, { dir: 'DOWN' }],
+        [{ dir: 'DOWN' }, { dir: 'LEFT' },  { dir: 'DOWN' },  { dir: 'DOWN' }]
+      ]
     };
   }
 

@@ -261,6 +261,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const remaining = arrows.filter(a => a.state === 'IDLE' || a.state === 'BUMPING').length;
     elRemaining.textContent = remaining;
     elHintBadge.textContent = hintsAvailable;
+
+    // Определение ситуации дедлока
+    if (remaining > 0 && !isLevelCompleted) {
+      const anyFree = arrows.some(a => a.state === 'IDLE' && canArrowEscape(a).clear);
+      if (!anyFree) {
+        btnRestart.style.boxShadow = '0 0 14px rgba(245, 158, 11, 0.7)';
+        btnUndo.style.boxShadow = '0 0 14px rgba(245, 158, 11, 0.7)';
+      } else {
+        btnRestart.style.boxShadow = '';
+        btnUndo.style.boxShadow = '';
+      }
+    }
   }
 
   function updateProgressionUI() {
@@ -737,6 +749,19 @@ document.addEventListener('DOMContentLoaded', () => {
   btnTheme.addEventListener('click', () => {
     themeIdx = (themeIdx + 1) % themes.length;
     window.soundEngine.playHint();
+  });
+
+  // Быстрый выбор уровня по клику на номер
+  elLevelNum.parentElement.style.cursor = 'pointer';
+  elLevelNum.parentElement.title = 'Нажмите для перехода к уровню';
+  elLevelNum.parentElement.addEventListener('click', () => {
+    const target = prompt(`Перейти к уровню (1-100):`, currentLevelIdx);
+    if (target) {
+      const num = parseInt(target, 10);
+      if (!isNaN(num) && num >= 1) {
+        loadLevel(num);
+      }
+    }
   });
 
   // Запуск первого уровня и ресайз
