@@ -1,0 +1,24 @@
+{
+  "gameId": "cyberarrow-circuit-escape",
+  "version": "1.0.0",
+  "advertisement": {
+    "minimumDelayBetweenInterstitial": 60,
+    "interstitial": {
+      "placements": [
+        {
+          "id": "level_completed"
+        }
+      ]
+    },
+    "rewarded": {
+      "placements": [
+        {
+          "id": "get_hint"
+        }
+      ]
+    }
+  },
+  "storage": {
+    "defaultType": "local_storage"
+  }
+}

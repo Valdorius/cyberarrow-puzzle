@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>CyberArrow: Circuit Escape</title>
+  <meta name="description" content="Тактильная логическая головоломка для Android на стыке Arrow Puzzle и кибернетической эстетики">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="stylesheet" href="style.css">
+  <!-- Playgama Bridge SDK -->
+  <script src="https://bridge.playgama.com/v2/stable/playgama-bridge.js"></script>
+</head>
+<body>
+  <div id="app" class="game-container">
+    <!-- Top Header / Meta Progress -->
+    <header class="game-header">
+      <div class="header-top">
+        <button id="btn-sound" class="icon-btn" aria-label="Звук" title="Звук">🔊</button>
+        <div class="level-indicator">
+          <span class="level-label">УРОВЕНЬ</span>
+          <span id="level-number" class="level-value">1</span>
+        </div>
+        <button id="btn-theme" class="icon-btn" aria-label="Тема" title="Сменить тему">✨</button>
+      </div>
+
+      <!-- Meta Progression Bar: Core Restoration -->
+      <div class="core-progress-card">
+        <div class="core-status">
+          <span class="core-title">🔋 Восстановление Ядра</span>
+          <span id="core-percent" class="core-val">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div id="core-progress-fill" class="progress-bar-fill" style="width: 5%;"></div>
+        </div>
+        <div id="core-milestone-text" class="core-milestone">Модуль 1: Питание шины данных</div>
+      </div>
+    </header>
+
+    <!-- Main Game Board Container -->
+    <main class="game-board-wrapper">
+      <div class="board-frame">
+        <canvas id="game-canvas"></canvas>
+      </div>
+      <div id="level-clear-overlay" class="level-clear-overlay hidden">
+        <div class="clear-card">
+          <div class="clear-icon">⚡</div>
+          <h2 class="clear-title">СЕКТОР ОЧИЩЕН!</h2>
+          <p id="clear-stats" class="clear-subtitle">Все стрелки выведены без ошибок</p>
+          <div class="clear-reward">
+            <span>+25 Энергии Ядра</span>
+          </div>
+          <button id="btn-next-level" class="primary-btn glow-btn">СЛЕДУЮЩИЙ УРОВЕНЬ ➔</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Controls & Hints -->
+    <footer class="game-footer">
+      <div class="moves-bar">
+        <div class="stat-pill">
+          <span class="stat-label">ОСТАЛОСЬ:</span>
+          <span id="remaining-arrows" class="stat-value">0</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">ХОДОВ:</span>
+          <span id="moves-count" class="stat-value">0</span>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button id="btn-restart" class="action-btn" title="Сбросить уровень">
+          <span class="btn-icon">↺</span>
+          <span class="btn-text">Сброс</span>
+        </button>
+
+        <button id="btn-undo" class="action-btn" title="Отменить ход">
+          <span class="btn-icon">↶</span>
+          <span class="btn-text">Назад</span>
+        </button>
+
+        <button id="btn-hint" class="action-btn action-btn-accent" title="Подсказка">
+          <span class="btn-icon">💡</span>
+          <span class="btn-text">Подсказка</span>
+          <span id="hint-badge" class="badge">3</span>
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <script src="audio.js"></script>
+  <script src="levels.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
